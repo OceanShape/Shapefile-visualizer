@@ -1,2 +1,2 @@
-# Shapefile-reader-by-OceanShape
+# Shapefile reader by OceanShape
 ESRI Shapefile reader
