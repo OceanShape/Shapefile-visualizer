@@ -7,18 +7,18 @@
 //using namespace std;
 
 struct SHPHeader {
-    int32_t fileCode;
-    int32_t fileLen;
-    int32_t SHPType;
+    uint32_t fileCode;
+    uint32_t fileLen;
+    uint32_t SHPType;
 
-    int64_t Xmin;
-    int64_t Ymin;
-    int64_t Xmax;
-    int64_t Ymax;
-    int64_t Zmin;
-    int64_t Zmax;
-    int64_t Mmin;
-    int64_t Mmax;
+    uint64_t Xmin;
+    uint64_t Ymin;
+    uint64_t Xmax;
+    uint64_t Ymax;
+    uint64_t Zmin;
+    uint64_t Zmax;
+    uint64_t Mmin;
+    uint64_t Mmax;
 };
 
 bool readShapefile(const char* fileName) {
@@ -53,12 +53,12 @@ bool readShapefile(const char* fileName) {
 
 
 
-    int8_t* data = new int8_t[fileSize];
+    uint8_t* data = new uint8_t[fileSize];
     memset(data, 0, fileSize);
-    fread(data, sizeof(int8_t), fileSize, fp);
+    fread(data, sizeof(uint8_t), fileSize, fp);
 
 
-    int64_t unit = 0;
+    uint64_t unit = 0;
     bool isBigEndian = true;
     bool isInteger = true;
 
@@ -78,15 +78,6 @@ bool readShapefile(const char* fileName) {
         }
         else {
             // default: Integer Little
-            if (i == 28) {
-                auto t = data[i];
-                //형변환할 것
-                uto q = t | (int64_t)0;
-                printf("%x ", data[i]);
-                printf("%x ", data[i + 1]);
-                printf("%x ", data[i + 2]);
-                printf("%x \n", data[i + 3]);
-            }
             unit = data[i] << 0 | (data[i + 1] << 8) | (data[i + 2] << 16) | (data[i + 3] << 24);
             i += 4;
             if (!isInteger) { // Double Little
@@ -96,16 +87,16 @@ bool readShapefile(const char* fileName) {
         }
 
         if (currentIdx == 0) {
-            printf("%d\n", (int32_t)unit);
+            printf("%d\n", (uint32_t)unit);
         }
         else if (currentIdx == 24) {
-            printf("%d\n", (int32_t)unit);
+            printf("%d\n", (uint32_t)unit);
         }
         else if (currentIdx == 28) {
-            printf("%d\n", (int32_t)unit);
+            printf("%d\n", (uint32_t)unit);
         }
         else if (currentIdx == 32) {
-            printf("%d\n", (int32_t)unit);
+            printf("%d\n", (uint32_t)unit);
         }
         else if (currentIdx == 36) {
             printf("%f\n", (double)unit);
