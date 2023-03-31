@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cstdint>
 #include <cstdio>
+#include <bitset>
 
 //using namespace std;
 
@@ -11,6 +12,7 @@ struct SHPHeader {
     uint32_t fileLen;
     uint32_t SHPType;
 
+    double
     uint64_t Xmin;
     uint64_t Ymin;
     uint64_t Xmax;
@@ -64,43 +66,78 @@ bool readShapefile(const char* fileName) {
 
 
     for (size_t i = 0; i < 100;) {
+        std::bitset<8> bits(data[i]);
         size_t currentIdx = i;
+
         if (currentIdx == 28) {
             isBigEndian = false;
         }
         else if (currentIdx == 36) {
-            isInteger = false;
-        }
+			isInteger = false;
+		}
 
-        if (isBigEndian) {
-            unit = (data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3];
-            i += 4;
-        }
-        else {
-            // default: Integer Little
-            unit = data[i] << 0 | (data[i + 1] << 8) | (data[i + 2] << 16) | (data[i + 3] << 24);
-            i += 4;
-            if (!isInteger) { // Double Little
-                unit = unit | data[i] << 32 | (data[i + 1] << 40) | (data[i + 2] << 48) | (data[i + 3] << 56);
-                i += 4;
+		if (isBigEndian) {
+			unit = static_cast<uint64_t>(data[i]) << 24 |
+				static_cast<uint64_t>(data[i + 1]) << 16 |
+				static_cast<uint64_t>(data[i + 2]) << 8 |
+				static_cast<uint64_t>(data[i + 3]);
+            for (size_t j = 0; j < 4; ++j) {
+                bits = data[i + j];
+                std::cout << bits << " ";
             }
-        }
+			i += 4;
+		}
+		else {
+			// default: Integer Little
+			unit = static_cast<uint64_t>(data[i]) |
+				(static_cast<uint64_t>(data[i + 1]) << 8) |
+				(static_cast<uint64_t>(data[i + 2]) << 16) |
+				(static_cast<uint64_t>(data[i + 3]) << 24);
+            for (int j = 3; j >= 0; --j) {
+                bits = data[i + j];
+                std::cout << bits << " ";
+            }
+            i += 4;
+			//if (currentIdx == 36) {
+   //             printf("%x\n", data[i + 2]);
+   //             printf("%x\n", data[i + 3]);
+   //         }
+			if (!isInteger) { // Double Little
+                for (int j = 3; j >= 0; --j) {
+                    bits = data[i + j];
+                    std::cout << bits << " ";
+                }
+				unit = unit | (static_cast<uint64_t>(data[i]) << 32) |
+					(static_cast<uint64_t>(data[i + 1]) << 40) |
+					(static_cast<uint64_t>(data[i + 2]) << 48) |
+					(static_cast<uint64_t>(data[i + 3]) << 56);
+                /*std::bitset<64> bits(unit);
+                std::cout << bits << std::endl;*/
+				i += 4;
+			}
+		}
 
-        if (currentIdx == 0) {
-            printf("%d\n", (uint32_t)unit);
-        }
-        else if (currentIdx == 24) {
-            printf("%d\n", (uint32_t)unit);
-        }
-        else if (currentIdx == 28) {
-            printf("%d\n", (uint32_t)unit);
-        }
-        else if (currentIdx == 32) {
-            printf("%d\n", (uint32_t)unit);
+        std::cout << "\t";
+
+		if (currentIdx == 0) {
+			printf("%d\n", (uint32_t)unit);
+		}
+		else if (currentIdx == 24) {
+			printf("%d\n", (uint32_t)unit);
+		}
+		else if (currentIdx == 28) {
+			printf("%d\n", (uint32_t)unit);
+		}
+		else if (currentIdx == 32) {
+			printf("%d\n", (uint32_t)unit);
         }
         else if (currentIdx == 36) {
-            printf("%f\n", (double)unit);
+            /*printf("min: %p\n", t);
+            std::cout << *t << std::endl;
+            printf("min: %f\n", *t);*/
         }
+
+        std::cout << std::endl;
     }
 
     fclose(fp);
