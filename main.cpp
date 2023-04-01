@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <bitset>
+#include <iomanip>
 
 //using namespace std;
 
@@ -118,8 +119,6 @@ bool readShapefile(const char* fileName) {
 			}
 		}
 
-        std::cout << "\t";
-
 		if (currentIdx == 0) {
 			printf("%d\n", (uint32_t)unit);
 		}
@@ -133,8 +132,9 @@ bool readShapefile(const char* fileName) {
 			printf("%d\n", (uint32_t)unit);
         }
         else if (currentIdx == 36) {
-            //std::cout << static_cast<double>(unit) << std::endl;
-            printf("min: %f\n", static_cast<double>(unit));
+            double val;
+            std::memcpy(&val, &unit, sizeof(double));
+            std::cout << std::setprecision(20) << val << std::endl;
         }
 
         std::cout << std::endl;
