@@ -12,7 +12,6 @@ struct SHPHeader {
     uint32_t fileLen;
     uint32_t SHPType;
 
-    double
     uint64_t Xmin;
     uint64_t Ymin;
     uint64_t Xmax;
@@ -86,14 +85,14 @@ bool readShapefile(const char* fileName) {
                 std::cout << bits << " ";
             }
 			i += 4;
-		}
+        }
 		else {
 			// default: Integer Little
-			unit = static_cast<uint64_t>(data[i]) |
+            unit = (static_cast<uint64_t>(data[i])) |
 				(static_cast<uint64_t>(data[i + 1]) << 8) |
 				(static_cast<uint64_t>(data[i + 2]) << 16) |
 				(static_cast<uint64_t>(data[i + 3]) << 24);
-            for (int j = 3; j >= 0; --j) {
+            for (int j = 0; j < 4; ++j) {
                 bits = data[i + j];
                 std::cout << bits << " ";
             }
@@ -103,16 +102,18 @@ bool readShapefile(const char* fileName) {
    //             printf("%x\n", data[i + 3]);
    //         }
 			if (!isInteger) { // Double Little
-                for (int j = 3; j >= 0; --j) {
+                for (int j = 0; j < 4; ++j) {
                     bits = data[i + j];
                     std::cout << bits << " ";
                 }
-				unit = unit | (static_cast<uint64_t>(data[i]) << 32) |
-					(static_cast<uint64_t>(data[i + 1]) << 40) |
-					(static_cast<uint64_t>(data[i + 2]) << 48) |
-					(static_cast<uint64_t>(data[i + 3]) << 56);
-                /*std::bitset<64> bits(unit);
-                std::cout << bits << std::endl;*/
+                unit = unit | (static_cast<uint64_t>(data[i]) << 32) |
+					(static_cast<uint64_t>(data[i + 1]) << 32 + 8) |
+					(static_cast<uint64_t>(data[i + 2]) << 32 + 16) |
+					(static_cast<uint64_t>(data[i + 3]) << 32 + 24);
+                if (currentIdx == 36) {
+				    std::bitset<64> bits(unit);
+				    std::cout << "\n" << bits << std::endl;
+                }
 				i += 4;
 			}
 		}
@@ -132,9 +133,8 @@ bool readShapefile(const char* fileName) {
 			printf("%d\n", (uint32_t)unit);
         }
         else if (currentIdx == 36) {
-            /*printf("min: %p\n", t);
-            std::cout << *t << std::endl;
-            printf("min: %f\n", *t);*/
+            //std::cout << static_cast<double>(unit) << std::endl;
+            printf("min: %f\n", static_cast<double>(unit));
         }
 
         std::cout << std::endl;
