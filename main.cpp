@@ -14,6 +14,7 @@ typedef unsigned char uchar;
 struct SHPHeaderData {
     int32_t fileCode;
     int32_t fileLen;
+    int32_t version;
     int32_t SHPType;
 
     double Xmin;
@@ -68,7 +69,7 @@ bool readShapefile(const char* fileName) {
         std::cout << "Failed to open file\n";
         return false;
     }
-
+                 
     fseek(fp, 0L, SEEK_END);
     long fileSize = ftell(fp);
     rewind(fp);
@@ -101,16 +102,19 @@ bool readShapefile(const char* fileName) {
     Byte 84 * Bounding Box Mmin        Double  Little
     Byte 92 * Bounding Box Mmax        Double  Little*/
 
-    bool isBigEndian = true;
-    bool isInteger = true;
-
     // File Code
-    memcpy(&shpHeaderData.fileCode, offset, 4); offset += 24;
+    memcpy(&shpHeaderData.fileCode, offset, 4); offset += 4;
     memSwap(&shpHeaderData.fileCode, 4);
 
+    // Unused
+    offset += 20;
+
     // File Length
-    memcpy(&shpHeaderData.fileLen, offset, 4);  offset += 8;
+    memcpy(&shpHeaderData.fileLen, offset, 4);  offset += 4;
     memSwap(&shpHeaderData.fileLen, 4);
+
+    // version
+    memcpy(&shpHeaderData.version, offset, 4);  offset += 4;
 
     // Shape Type
     memcpy(&shpHeaderData.SHPType, offset, 4);  offset += 4;
@@ -123,11 +127,15 @@ bool readShapefile(const char* fileName) {
 
     printf("%d\n", shpHeaderData.fileCode);
     printf("%d\n", shpHeaderData.fileLen);
+    printf("%d\n", shpHeaderData.version);
     printf("%d\n", shpHeaderData.SHPType);
     printf("%0.16f\n", shpHeaderData.Xmin);
     printf("%0.16f\n", shpHeaderData.Ymin);
     printf("%0.16f\n", shpHeaderData.Xmax);
     printf("%0.16f\n", shpHeaderData.Ymax);
+
+
+
 
     fclose(fp);
     delete[] data;
