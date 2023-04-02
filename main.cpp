@@ -5,26 +5,65 @@
 #include <cstdio>
 #include <bitset>
 #include <iomanip>
+#include <vector>
 
-//using namespace std;
+using namespace std;
 
-struct SHPHeader {
-    uint32_t fileCode;
-    uint32_t fileLen;
-    uint32_t SHPType;
+typedef unsigned char uchar;
 
-    uint64_t Xmin;
-    uint64_t Ymin;
-    uint64_t Xmax;
-    uint64_t Ymax;
-    uint64_t Zmin;
-    uint64_t Zmax;
-    uint64_t Mmin;
-    uint64_t Mmax;
+struct SHPHeaderData {
+    int32_t fileCode;
+    int32_t fileLen;
+    int32_t SHPType;
+
+    double Xmin;
+    double Ymin;
+    double Xmax;
+    double Ymax;
+    double Zmin;
+    double Zmax;
+    double Mmin;
+    double Mmax;
 };
 
+struct SHPRecord {
+    int32_t type;
+};
+
+struct SHPRecordData {
+    int32_t num;    // Big
+    int32_t length; // Big
+    vector<SHPRecord> content;
+};
+
+
+struct SHPPoint : public SHPRecord {
+    double x;   // Little
+    double y;   // Little
+};
+
+struct SHPPolygon : public SHPRecord {
+    double box[4];
+    shared_ptr<vector<int32_t>> parts;
+    shared_ptr<vector<SHPPoint>> points;
+};
+
+SHPHeaderData header;
+SHPRecordData record;
+
+void memSwap(void* const data, size_t size) {
+    uint8_t* start = (uint8_t*)data;
+    uint8_t* end = (uint8_t*)data + size - 1;
+    while (start < end) {
+        uint8_t tmp = *start;
+        *start = *end;
+        *end = tmp;
+        start++, end--;
+    }
+}
+
 bool readShapefile(const char* fileName) {
-    FILE* fp = fopen(fileName, "rb"); // 바이너리 파일 열기
+    FILE* fp = fopen(fileName, "rb");
     if (fp == NULL) {
         std::cout << "Failed to open file\n";
         return false;
@@ -34,111 +73,61 @@ bool readShapefile(const char* fileName) {
     long fileSize = ftell(fp);
     rewind(fp);
 
-    // Double은 Little이 없음
-    //  순서 뒤집어야 하는 건 Big!
-    //  Double이 나오면 두 개를 연결만 하면 되므로, 최소단위는 int로 하자
-
     // Shapefile은 한 파일에 하나의 SHP 타입만 존재
     // 즉, 헤더 분석 과정에서 타입 특정 가능
 
-    // data 초기화
-    // 1byte단위로 끊어서 data에 복사
-    // 복사한 내용 분석
-    //      전체 파일 헤더
-    //          Shapefile 타입 확인
-    //          문제 발생 시 false
-    //              (문제 목록): 헤더와 내용이 맞지 않음
-    //      레코드 헤더(Int Big 두 개)
-    //      레코드 내용(Ing/Double Little)
-
-    // 파일 크기: 1778986
-
-
-
-    uint8_t* data = new uint8_t[fileSize];
+    uchar* data = new uchar[fileSize];
     memset(data, 0, fileSize);
-    fread(data, sizeof(uint8_t), fileSize, fp);
+    fread(data, sizeof(uchar), fileSize, fp);
 
+    uchar* offset = data;
+    
+    SHPHeaderData shpHeaderData;
+    /*Byte 0     File Code    9994        Integer Big
+    Byte 4     Unused       0           Integer Big
+    Byte 8     Unused       0           Integer Big
+    Byte 12    Unused       0           Integer Big
+    Byte 16    Unused       0           Integer Big
+    Byte 20    Unused       0           Integer Big
+    Byte 24    File Length  File Length Integer Big
+    Byte 28    Version      1000        Integer Little
+    Byte 32    Shape Type   Shape Type  Integer Little
+    Byte 36    Bounding Box Xmin        Double  Little
+    Byte 44    Bounding Box Ymin        Double  Little
+    Byte 52    Bounding Box Xmax        Double  Little
+    Byte 60    Bounding Box Ymax        Double  Little
+    Byte 68 * Bounding Box Zmin        Double  Little
+    Byte 76 * Bounding Box Zmax        Double  Little
+    Byte 84 * Bounding Box Mmin        Double  Little
+    Byte 92 * Bounding Box Mmax        Double  Little*/
 
-    uint64_t unit = 0;
     bool isBigEndian = true;
     bool isInteger = true;
 
+    // File Code
+    memcpy(&shpHeaderData.fileCode, offset, 4); offset += 24;
+    memSwap(&shpHeaderData.fileCode, 4);
 
-    for (size_t i = 0; i < 100;) {
-        std::bitset<8> bits(data[i]);
-        size_t currentIdx = i;
+    // File Length
+    memcpy(&shpHeaderData.fileLen, offset, 4);  offset += 8;
+    memSwap(&shpHeaderData.fileLen, 4);
 
-        if (currentIdx == 28) {
-            isBigEndian = false;
-        }
-        else if (currentIdx == 36) {
-			isInteger = false;
-		}
+    // Shape Type
+    memcpy(&shpHeaderData.SHPType, offset, 4);  offset += 4;
+    
+    // Bounding Box
+    memcpy(&shpHeaderData.Xmin, offset, 8); offset += 8;
+    memcpy(&shpHeaderData.Ymin, offset, 8); offset += 8;
+    memcpy(&shpHeaderData.Xmax, offset, 8); offset += 8;
+    memcpy(&shpHeaderData.Ymax, offset, 8); offset += 8;
 
-		if (isBigEndian) {
-			unit = static_cast<uint64_t>(data[i]) << 24 |
-				static_cast<uint64_t>(data[i + 1]) << 16 |
-				static_cast<uint64_t>(data[i + 2]) << 8 |
-				static_cast<uint64_t>(data[i + 3]);
-            for (size_t j = 0; j < 4; ++j) {
-                bits = data[i + j];
-                std::cout << bits << " ";
-            }
-			i += 4;
-        }
-		else {
-			// default: Integer Little
-            unit = (static_cast<uint64_t>(data[i])) |
-				(static_cast<uint64_t>(data[i + 1]) << 8) |
-				(static_cast<uint64_t>(data[i + 2]) << 16) |
-				(static_cast<uint64_t>(data[i + 3]) << 24);
-            for (int j = 0; j < 4; ++j) {
-                bits = data[i + j];
-                std::cout << bits << " ";
-            }
-            i += 4;
-			//if (currentIdx == 36) {
-   //             printf("%x\n", data[i + 2]);
-   //             printf("%x\n", data[i + 3]);
-   //         }
-			if (!isInteger) { // Double Little
-                for (int j = 0; j < 4; ++j) {
-                    bits = data[i + j];
-                    std::cout << bits << " ";
-                }
-                unit = unit | (static_cast<uint64_t>(data[i]) << 32) |
-					(static_cast<uint64_t>(data[i + 1]) << 32 + 8) |
-					(static_cast<uint64_t>(data[i + 2]) << 32 + 16) |
-					(static_cast<uint64_t>(data[i + 3]) << 32 + 24);
-                if (currentIdx == 36) {
-				    std::bitset<64> bits(unit);
-				    std::cout << "\n" << bits << std::endl;
-                }
-				i += 4;
-			}
-		}
-
-		if (currentIdx == 0) {
-			printf("%d\n", (uint32_t)unit);
-		}
-		else if (currentIdx == 24) {
-			printf("%d\n", (uint32_t)unit);
-		}
-		else if (currentIdx == 28) {
-			printf("%d\n", (uint32_t)unit);
-		}
-		else if (currentIdx == 32) {
-			printf("%d\n", (uint32_t)unit);
-        }
-        else if (currentIdx == 36) {
-            double val;
-            std::memcpy(&val, &unit, sizeof(double));
-            std::cout << std::setprecision(20) << val << std::endl;
-        }
-
-        std::cout << std::endl;
-    }
+    printf("%d\n", shpHeaderData.fileCode);
+    printf("%d\n", shpHeaderData.fileLen);
+    printf("%d\n", shpHeaderData.SHPType);
+    printf("%0.16f\n", shpHeaderData.Xmin);
+    printf("%0.16f\n", shpHeaderData.Ymin);
+    printf("%0.16f\n", shpHeaderData.Xmax);
+    printf("%0.16f\n", shpHeaderData.Ymax);
 
     fclose(fp);
     delete[] data;
