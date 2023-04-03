@@ -152,6 +152,7 @@ bool readShapefile(const char* fileName) {
     int32_t numPoints;
     int32_t parts;
     SHPPoint points[8];
+    double pointTest[16];
 
     memcpy(&recordNum, offset, 4);  offset += 4;
     memSwap(&recordNum, 4);
@@ -168,7 +169,8 @@ bool readShapefile(const char* fileName) {
 
     memcpy(&parts, offset, 4);  offset += 4;
 
-    memcpy(points, offset, sizeof(SHPPoint) * 8);  offset += sizeof(SHPPoint) * 8;
+    //memcpy(points, offset, sizeof(SHPPoint) * 8);  offset += sizeof(SHPPoint) * 8;
+    memcpy(pointTest, offset, sizeof(double) * 16);
 
     
     printf("recordNum:\t%d\n", recordNum);
@@ -180,8 +182,11 @@ bool readShapefile(const char* fileName) {
     printf("numParts:\t%d\n", numParts);
     printf("numPoints:\t%d\n", numPoints);
     printf("parts:\t%d\n", parts);
-    for (size_t i = 0; i < 8; ++i) {
+    /*for (size_t i = 0; i < 8; ++i) {
         printf("%f, %f\n", points[i].x, points[i].y);
+    }*/
+    for (size_t i = 0; i < 8; ++i) {
+        printf("%0.16f, %0.16f\n", pointTest[i * 2], pointTest[i * 2 + 1]);
     }
 
     //for (size_t i = 0; i < 8; ++i) {
