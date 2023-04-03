@@ -29,6 +29,7 @@ struct SHPHeaderData {
 
 struct SHPRecord {
     int32_t type;
+    int32_t padding;
 };
 
 struct SHPRecordData {
@@ -124,16 +125,70 @@ bool readShapefile(const char* fileName) {
     memcpy(&shpHeaderData.Ymin, offset, 8); offset += 8;
     memcpy(&shpHeaderData.Xmax, offset, 8); offset += 8;
     memcpy(&shpHeaderData.Ymax, offset, 8); offset += 8;
+    memcpy(&shpHeaderData.Zmin, offset, 8); offset += 8;
+    memcpy(&shpHeaderData.Zmax, offset, 8); offset += 8;
+    memcpy(&shpHeaderData.Mmin, offset, 8); offset += 8;
+    memcpy(&shpHeaderData.Mmax, offset, 8); offset += 8;
 
-    printf("%d\n", shpHeaderData.fileCode);
-    printf("%d\n", shpHeaderData.fileLen);
-    printf("%d\n", shpHeaderData.version);
-    printf("%d\n", shpHeaderData.SHPType);
-    printf("%0.16f\n", shpHeaderData.Xmin);
-    printf("%0.16f\n", shpHeaderData.Ymin);
-    printf("%0.16f\n", shpHeaderData.Xmax);
-    printf("%0.16f\n", shpHeaderData.Ymax);
+    //printf("%d\n", shpHeaderData.fileCode);
+    //printf("%d\n", shpHeaderData.fileLen);
+    //printf("%d\n", shpHeaderData.version);
+    //printf("%d\n", shpHeaderData.SHPType);
+    //printf("%0.16f\n", shpHeaderData.Xmin);
+    //printf("%0.16f\n", shpHeaderData.Ymin);
+    //printf("%0.16f\n", shpHeaderData.Xmax);
+    //printf("%0.16f\n", shpHeaderData.Ymax);
+    //printf("%0.16f\n", shpHeaderData.Zmin);
+    //printf("%0.16f\n", shpHeaderData.Zmax);
+    //printf("%0.16f\n", shpHeaderData.Mmin);
+    //printf("%0.16f\n", shpHeaderData.Mmax);
 
+    int32_t recordNum;
+    int32_t contentLength;
+
+    int32_t shapeType;
+    double box[4];
+    int32_t numParts;
+    int32_t numPoints;
+    int32_t parts;
+    SHPPoint points[8];
+
+    memcpy(&recordNum, offset, 4);  offset += 4;
+    memSwap(&recordNum, 4);
+
+    memcpy(&contentLength, offset, 4);  offset += 4;
+    memSwap(&contentLength, 4);
+
+    memcpy(&shapeType, offset, 4);  offset += 4;
+
+    memcpy(box, offset, 8 * 4);  offset += 8 * 4;
+
+    memcpy(&numParts, offset, 4);  offset += 4;
+    memcpy(&numPoints, offset, 4);  offset += 4;
+
+    memcpy(&parts, offset, 4);  offset += 4;
+
+    memcpy(points, offset, sizeof(SHPPoint) * 8);  offset += sizeof(SHPPoint) * 8;
+
+    
+    printf("recordNum:\t%d\n", recordNum);
+    printf("contentLength:\t%d\n", contentLength);
+    printf("shapeType:\t%d\n", shapeType);
+    for (size_t i = 0; i < 4; ++i) {
+        printf("%f\n", box[i]);
+    }
+    printf("numParts:\t%d\n", numParts);
+    printf("numPoints:\t%d\n", numPoints);
+    printf("parts:\t%d\n", parts);
+    for (size_t i = 0; i < 8; ++i) {
+        printf("%f, %f\n", points[i].x, points[i].y);
+    }
+
+    //for (size_t i = 0; i < 8; ++i) {
+    //    SHPPoint p;
+    //    memcpy(&p, offset, sizeof(SHPPoint));   offset += sizeof(SHPPoint);
+    //    printf("SHPPoint: %d\n", p.type);
+    //}
 
 
 
