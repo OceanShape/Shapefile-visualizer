@@ -11,7 +11,7 @@ using namespace std;
 
 typedef unsigned char uchar;
 
-struct SHPHeaderData {
+struct SHPHeader {
     int32_t fileCode;
     int32_t fileLen;
     int32_t version;
@@ -39,18 +39,18 @@ struct SHPRecordData {
 };
 
 
-struct SHPPoint : public SHPRecord {
-    double x;   // Little
-    double y;   // Little
+struct SHPPoint {
+    double x;
+    double y;
 };
 
-struct SHPPolygon : public SHPRecord {
+struct SHPPolygon {
     double box[4];
     shared_ptr<vector<int32_t>> parts;
     shared_ptr<vector<SHPPoint>> points;
 };
 
-SHPHeaderData header;
+SHPHeader header;
 SHPRecordData record;
 
 void memSwap(void* const data, size_t size) {
@@ -84,7 +84,7 @@ bool readShapefile(const char* fileName) {
 
     uchar* offset = data;
     
-    SHPHeaderData shpHeaderData;
+    SHPHeader shpHeaderData;
     /*Byte 0     File Code    9994        Integer Big
     Byte 4     Unused       0           Integer Big
     Byte 8     Unused       0           Integer Big
@@ -104,100 +104,78 @@ bool readShapefile(const char* fileName) {
     Byte 92 * Bounding Box Mmax        Double  Little*/
 
     // File Code
-    memcpy(&shpHeaderData.fileCode, offset, 4); offset += 4;
+    std::memcpy(&shpHeaderData.fileCode, offset, 4); offset += 4;
     memSwap(&shpHeaderData.fileCode, 4);
 
     // Unused
     offset += 20;
 
     // File Length
-    memcpy(&shpHeaderData.fileLen, offset, 4);  offset += 4;
+    std::memcpy(&shpHeaderData.fileLen, offset, 4);  offset += 4;
     memSwap(&shpHeaderData.fileLen, 4);
 
     // version
-    memcpy(&shpHeaderData.version, offset, 4);  offset += 4;
+    std::memcpy(&shpHeaderData.version, offset, 4);  offset += 4;
 
     // Shape Type
-    memcpy(&shpHeaderData.SHPType, offset, 4);  offset += 4;
+    std::memcpy(&shpHeaderData.SHPType, offset, 4);  offset += 4;
     
     // Bounding Box
-    memcpy(&shpHeaderData.Xmin, offset, 8); offset += 8;
-    memcpy(&shpHeaderData.Ymin, offset, 8); offset += 8;
-    memcpy(&shpHeaderData.Xmax, offset, 8); offset += 8;
-    memcpy(&shpHeaderData.Ymax, offset, 8); offset += 8;
-    memcpy(&shpHeaderData.Zmin, offset, 8); offset += 8;
-    memcpy(&shpHeaderData.Zmax, offset, 8); offset += 8;
-    memcpy(&shpHeaderData.Mmin, offset, 8); offset += 8;
-    memcpy(&shpHeaderData.Mmax, offset, 8); offset += 8;
+    std::memcpy(&shpHeaderData.Xmin, offset, 8); offset += 8;
+    std::memcpy(&shpHeaderData.Ymin, offset, 8); offset += 8;
+    std::memcpy(&shpHeaderData.Xmax, offset, 8); offset += 8;
+    std::memcpy(&shpHeaderData.Ymax, offset, 8); offset += 8;
+    std::memcpy(&shpHeaderData.Zmin, offset, 8); offset += 8;
+    std::memcpy(&shpHeaderData.Zmax, offset, 8); offset += 8;
+    std::memcpy(&shpHeaderData.Mmin, offset, 8); offset += 8;
+    std::memcpy(&shpHeaderData.Mmax, offset, 8); offset += 8;
 
-    //printf("%d\n", shpHeaderData.fileCode);
-    //printf("%d\n", shpHeaderData.fileLen);
-    //printf("%d\n", shpHeaderData.version);
-    //printf("%d\n", shpHeaderData.SHPType);
-    //printf("%0.16f\n", shpHeaderData.Xmin);
-    //printf("%0.16f\n", shpHeaderData.Ymin);
-    //printf("%0.16f\n", shpHeaderData.Xmax);
-    //printf("%0.16f\n", shpHeaderData.Ymax);
-    //printf("%0.16f\n", shpHeaderData.Zmin);
-    //printf("%0.16f\n", shpHeaderData.Zmax);
-    //printf("%0.16f\n", shpHeaderData.Mmin);
-    //printf("%0.16f\n", shpHeaderData.Mmax);
+    for (size_t s = 0; s < 1; ++s) {
+        int32_t recordNum;
+        int32_t contentLength;
 
-    int32_t recordNum;
-    int32_t contentLength;
+        int32_t shapeType;
+        double box[4];
+        int32_t numParts;
+        int32_t numPoints;
+        int32_t parts;
+        SHPPoint points[8];
+        double pointTest[1000];
 
-    int32_t shapeType;
-    double box[4];
-    int32_t numParts;
-    int32_t numPoints;
-    int32_t parts;
-    SHPPoint points[8];
-    double pointTest[16];
+        std::memcpy(&recordNum, offset, 4);  offset += 4;
+        memSwap(&recordNum, 4);
 
-    memcpy(&recordNum, offset, 4);  offset += 4;
-    memSwap(&recordNum, 4);
+        std::memcpy(&contentLength, offset, 4);  offset += 4;
+        memSwap(&contentLength, 4);
 
-    memcpy(&contentLength, offset, 4);  offset += 4;
-    memSwap(&contentLength, 4);
+        std::memcpy(&shapeType, offset, 4);  offset += 4;
 
-    memcpy(&shapeType, offset, 4);  offset += 4;
+        std::memcpy(box, offset, sizeof(double) * 4);  offset += sizeof(double) * 4;
 
-    memcpy(box, offset, 8 * 4);  offset += 8 * 4;
+        std::memcpy(&numParts, offset, 4);  offset += 4;
+        std::memcpy(&numPoints, offset, 4);  offset += 4;
 
-    memcpy(&numParts, offset, 4);  offset += 4;
-    memcpy(&numPoints, offset, 4);  offset += 4;
+        std::memcpy(&parts, offset, sizeof(int32_t) * numParts);  offset += sizeof(int32_t) * numParts;
 
-    memcpy(&parts, offset, 4);  offset += 4;
+        std::memcpy(pointTest, offset, sizeof(SHPPoint) * numPoints);  offset += sizeof(SHPPoint) * numPoints;
 
-    //memcpy(points, offset, sizeof(SHPPoint) * 8);  offset += sizeof(SHPPoint) * 8;
-    memcpy(pointTest, offset, sizeof(double) * 16);
 
-    
-    printf("recordNum:\t%d\n", recordNum);
-    printf("contentLength:\t%d\n", contentLength);
-    printf("shapeType:\t%d\n", shapeType);
-    for (size_t i = 0; i < 4; ++i) {
-        printf("%f\n", box[i]);
-    }
-    printf("numParts:\t%d\n", numParts);
-    printf("numPoints:\t%d\n", numPoints);
-    printf("parts:\t%d\n", parts);
-    /*for (size_t i = 0; i < 8; ++i) {
-        printf("%f, %f\n", points[i].x, points[i].y);
-    }*/
-    for (size_t i = 0; i < 8; ++i) {
-        printf("%0.16f, %0.16f\n", pointTest[i * 2], pointTest[i * 2 + 1]);
+        std::printf("recordNum:\t%d\n", recordNum);
+        std::printf("contentLength:\t%d\n", contentLength);
+        std::printf("shapeType:\t%d\n", shapeType);
+        for (size_t i = 0; i < 4; ++i) {
+            std::printf("%f\n", box[i]);
+        }
+        std::printf("numParts:\t%d\n", numParts);
+        std::printf("numPoints:\t%d\n", numPoints);
+        std::printf("parts:\t%d\n", parts);
+        for (size_t i = 0; i < numPoints; ++i) {
+            std::printf("%0.16f, %0.16f\n", pointTest[i * 2], pointTest[i * 2 + 1]);
+        }
+        std::cout << "---" << endl;
     }
 
-    //for (size_t i = 0; i < 8; ++i) {
-    //    SHPPoint p;
-    //    memcpy(&p, offset, sizeof(SHPPoint));   offset += sizeof(SHPPoint);
-    //    printf("SHPPoint: %d\n", p.type);
-    //}
-
-
-
-    fclose(fp);
+    std::fclose(fp);
     delete[] data;
 
     return true;
