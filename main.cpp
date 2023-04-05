@@ -133,16 +133,14 @@ bool readShapefile(const char* fileName) {
     int32_t recordCount = 0;
     bool isPrintStatus = true;
     SHPPoint* points = new SHPPoint[1000];
-    double* Zpoints = nullptr;
+    double* Zpoints = new double[1000];
     int32_t* parts = new int32_t[1000];
 
-    if (shpHeaderData.SHPType == 13) {
-        Zpoints = new double[1000];
-    }
-
-    while (offset < data + fileSize) {
-    //for (size_t r = 0; r < 262; ++r) {
+    //while (offset < data + fileSize) {
+    for (size_t r = 0; r < 1; ++r) {
         uchar* startOffset = offset;
+
+        bool hasZvalue = false;
 
         int32_t recordNum;
         int32_t contentLength;
@@ -177,6 +175,14 @@ bool readShapefile(const char* fileName) {
             std::memcpy(Zpoints, offset, sizeof(double) * numPoints);	offset += sizeof(double) * numPoints;
         }
 
+        // Z point
+        if (offset - startOffset < contentLength * 2) {
+            hasZvalue = true;
+
+            std::memcpy(Zrange, offset, sizeof(double) * 2);    offset += sizeof(double) * 2;
+            std::memcpy(Zpoints, offset, sizeof(double) * numPoints);	offset += sizeof(double) * numPoints;
+        }
+
         // M point(ignore)
         if (offset - startOffset < contentLength * 2) {
             //double Mrange[2];
@@ -202,7 +208,7 @@ bool readShapefile(const char* fileName) {
             }
 
             std::printf("numPoints:\t%d\n", numPoints);
-            if (shpHeaderData.SHPType == 13) {
+            if (hasZvalue) {
                 for (size_t p = 0; p < numPoints; ++p) {
                     std::printf("\t%0.16f, %0.16f, %0.16f\n", points[p].x, points[p].y, Zpoints[p]);
                 }
@@ -234,6 +240,6 @@ bool readShapefile(const char* fileName) {
 }
 
 int main() {
-    readShapefile("A2_LINK.shp");
+    readShapefile("B3_SURFACEMARK.shp");
     return 0;
 }
