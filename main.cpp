@@ -133,10 +133,15 @@ bool readShapefile(const char* fileName) {
     int32_t recordCount = 0;
     bool isPrintStatus = true;
     SHPPoint* points = new SHPPoint[1000];
+    double* Zpoints = nullptr;
     int32_t* parts = new int32_t[1000];
 
+    if (shpHeaderData.SHPType == 13) {
+        Zpoints = new double[1000];
+    }
+
     //while (offset < data + fileSize) {
-    for (size_t r = 0; r < 20135; ++r) {
+    for (size_t r = 0; r < 6; ++r) {
         int32_t recordNum;
         int32_t contentLength;
 
@@ -144,6 +149,8 @@ bool readShapefile(const char* fileName) {
         double box[4];
         int32_t numParts;
         int32_t numPoints;
+        double Zrange[2];   // min, max
+
 
         std::memcpy(&recordNum, offset, 4);  offset += 4;
         memSwap(&recordNum, 4);
@@ -162,7 +169,13 @@ bool readShapefile(const char* fileName) {
 
         std::memcpy(points, offset, sizeof(SHPPoint) * numPoints);	offset += sizeof(SHPPoint) * numPoints;
 
-        if(isPrintStatus && r == 20134) {
+        if(shpHeaderData.SHPType == 13) {
+            std::memcpy(Zrange, offset, sizeof(double) * 2);    offset += sizeof(double) * 2;
+
+            std::memcpy(Zpoints, offset, sizeof(double) * numPoints);	offset += sizeof(double) * numPoints;
+        }
+
+        if(isPrintStatus) {
             std::printf("recordNum:\t%d\n", recordNum);
             std::printf("contentLength:\t%d\n", contentLength);
             std::printf("shapeType:\t%d\n", shapeType);
@@ -177,9 +190,18 @@ bool readShapefile(const char* fileName) {
             }
 
             std::printf("numPoints:\t%d\n", numPoints);
-            for (size_t p = 0; p < numPoints; ++p) {
-                std::printf("\t%0.16f, %0.16f\n", points[p].x, points[p].y);
+            if (shpHeaderData.SHPType == 13) {
+                for (size_t p = 0; p < numPoints; ++p) {
+                    std::printf("\t%0.16f, %0.16f, %0.16f\n", points[p].x, points[p].y, Zpoints[p]);
+                }
+                std::printf("Z range: %0.16f, %0.16f\n", Zrange[0], Zrange[1]);
             }
+            else {
+                for (size_t p = 0; p < numPoints; ++p) {
+                    std::printf("\t%0.16f, %0.16f\n", points[p].x, points[p].y);
+                }
+            }
+
             std::cout << "---" << endl;
         }
 
@@ -187,9 +209,10 @@ bool readShapefile(const char* fileName) {
         //std::cout << recordNum << endl;
     }
 
-    std::cout << recordCount << endl;
+    std::cout << "total record count: " << recordCount << endl;
 
     std::fclose(fp);
+    delete[] Zpoints;
     delete[] parts;
     delete[] points;
     delete[] data;
@@ -198,6 +221,6 @@ bool readShapefile(const char* fileName) {
 }
 
 int main() {
-    readShapefile("sample.shp");
+    readShapefile("sample2.shp");
     return 0;
 }
