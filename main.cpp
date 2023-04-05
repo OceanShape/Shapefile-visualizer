@@ -169,11 +169,6 @@ bool readShapefile(const char* fileName) {
 
         std::memcpy(points, offset, sizeof(SHPPoint) * numPoints);	offset += sizeof(SHPPoint) * numPoints;
 
-        if(shpHeaderData.SHPType == 13) {
-            std::memcpy(Zrange, offset, sizeof(double) * 2);    offset += sizeof(double) * 2;
-
-            std::memcpy(Zpoints, offset, sizeof(double) * numPoints);	offset += sizeof(double) * numPoints;
-        }
 
         // Z point
         if (offset - startOffset < contentLength * 2) {
