@@ -140,8 +140,10 @@ bool readShapefile(const char* fileName) {
         Zpoints = new double[1000];
     }
 
-    //while (offset < data + fileSize) {
-    for (size_t r = 0; r < 6; ++r) {
+    while (offset < data + fileSize) {
+    //for (size_t r = 0; r < 262; ++r) {
+        uchar* startOffset = offset;
+
         int32_t recordNum;
         int32_t contentLength;
 
@@ -175,6 +177,16 @@ bool readShapefile(const char* fileName) {
             std::memcpy(Zpoints, offset, sizeof(double) * numPoints);	offset += sizeof(double) * numPoints;
         }
 
+        // M point(ignore)
+        if (offset - startOffset < contentLength * 2) {
+            //double Mrange[2];
+            //float Mpoints[1000];
+            //std::memcpy(Mrange, offset, sizeof(double) * 2);
+            offset += sizeof(double) * 2;
+            //std::memcpy(Mpoints, offset, sizeof(double) * numPoints);
+            offset += sizeof(double) * numPoints;
+        }
+
         if(isPrintStatus) {
             std::printf("recordNum:\t%d\n", recordNum);
             std::printf("contentLength:\t%d\n", contentLength);
@@ -186,7 +198,7 @@ bool readShapefile(const char* fileName) {
             }
             std::printf("numParts:\t%d\n", numParts);
             for (size_t p = 0; p < numParts; ++p) {
-                std::printf("\t%d, %d\n", parts[p], parts[p]);
+                std::printf("\t%d\n", parts[p]);
             }
 
             std::printf("numPoints:\t%d\n", numPoints);
@@ -209,6 +221,7 @@ bool readShapefile(const char* fileName) {
         //std::cout << recordNum << endl;
     }
 
+
     std::cout << "total record count: " << recordCount << endl;
 
     std::fclose(fp);
@@ -221,6 +234,6 @@ bool readShapefile(const char* fileName) {
 }
 
 int main() {
-    readShapefile("sample2.shp");
+    readShapefile("A2_LINK.shp");
     return 0;
 }
