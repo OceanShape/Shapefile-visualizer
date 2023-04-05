@@ -130,7 +130,13 @@ bool readShapefile(const char* fileName) {
     std::memcpy(&shpHeaderData.Mmin, offset, 8); offset += 8;
     std::memcpy(&shpHeaderData.Mmax, offset, 8); offset += 8;
 
-    for (size_t s = 0; s < 1; ++s) {
+    int32_t recordCount = 0;
+    bool isPrintStatus = true;
+    SHPPoint* points = new SHPPoint[1000];
+    int32_t* parts = new int32_t[1000];
+
+    //while (offset < data + fileSize) {
+    for (size_t r = 0; r < 20135; ++r) {
         int32_t recordNum;
         int32_t contentLength;
 
@@ -138,9 +144,6 @@ bool readShapefile(const char* fileName) {
         double box[4];
         int32_t numParts;
         int32_t numPoints;
-        int32_t parts;
-        SHPPoint points[8];
-        double pointTest[1000];
 
         std::memcpy(&recordNum, offset, 4);  offset += 4;
         memSwap(&recordNum, 4);
@@ -155,27 +158,40 @@ bool readShapefile(const char* fileName) {
         std::memcpy(&numParts, offset, 4);  offset += 4;
         std::memcpy(&numPoints, offset, 4);  offset += 4;
 
-        std::memcpy(&parts, offset, sizeof(int32_t) * numParts);  offset += sizeof(int32_t) * numParts;
+        std::memcpy(parts, offset, sizeof(int32_t) * numParts);	offset += sizeof(int32_t) * numParts;
 
-        std::memcpy(pointTest, offset, sizeof(SHPPoint) * numPoints);  offset += sizeof(SHPPoint) * numPoints;
+        std::memcpy(points, offset, sizeof(SHPPoint) * numPoints);	offset += sizeof(SHPPoint) * numPoints;
 
+        if(isPrintStatus && r == 20134) {
+            std::printf("recordNum:\t%d\n", recordNum);
+            std::printf("contentLength:\t%d\n", contentLength);
+            std::printf("shapeType:\t%d\n", shapeType);
 
-        std::printf("recordNum:\t%d\n", recordNum);
-        std::printf("contentLength:\t%d\n", contentLength);
-        std::printf("shapeType:\t%d\n", shapeType);
-        for (size_t i = 0; i < 4; ++i) {
-            std::printf("%f\n", box[i]);
+            std::printf("bounding\n");
+            for (size_t j = 0; j < 4; ++j) {
+                std::printf("\t%f\n", box[j]);
+            }
+            std::printf("numParts:\t%d\n", numParts);
+            for (size_t p = 0; p < numParts; ++p) {
+                std::printf("\t%d, %d\n", parts[p], parts[p]);
+            }
+
+            std::printf("numPoints:\t%d\n", numPoints);
+            for (size_t p = 0; p < numPoints; ++p) {
+                std::printf("\t%0.16f, %0.16f\n", points[p].x, points[p].y);
+            }
+            std::cout << "---" << endl;
         }
-        std::printf("numParts:\t%d\n", numParts);
-        std::printf("numPoints:\t%d\n", numPoints);
-        std::printf("parts:\t%d\n", parts);
-        for (size_t i = 0; i < numPoints; ++i) {
-            std::printf("%0.16f, %0.16f\n", pointTest[i * 2], pointTest[i * 2 + 1]);
-        }
-        std::cout << "---" << endl;
+
+        recordCount++;
+        //std::cout << recordNum << endl;
     }
 
+    std::cout << recordCount << endl;
+
     std::fclose(fp);
+    delete[] parts;
+    delete[] points;
     delete[] data;
 
     return true;
