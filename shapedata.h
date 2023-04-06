@@ -1,4 +1,9 @@
 #pragma once
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
 struct SHPHeader {
     int32_t fileCode;
     int32_t fileLen;
