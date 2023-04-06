@@ -3,15 +3,167 @@
 #include <fstream>
 #include <cstdint>
 #include <cstdio>
-#include <bitset>
+#include <string>
 #include <iomanip>
 #include <vector>
+
+#include <EGL/egl.h>
+#include <GLES3/gl3.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "shapedata.h"
 
 using namespace std;
 
 typedef unsigned char uchar;
+
+EGLint EGL_OPENGL_ES3_BIT_KHR = 0x0040;
+
+EGLDisplay eglDisplay;
+EGLSurface eglSurface;
+EGLContext eglContext;
+
+GLuint vbo;
+GLuint program;
+
+vector<float> vertices;
+vector<int> objectVertices;
+
+bool checkShaderCompileStatus(GLuint shader)
+{
+    GLint compileStatus;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compileStatus);
+    if (compileStatus == GL_FALSE)
+    {
+        GLint infoLogLength;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
+        vector<char> infoLog(infoLogLength);
+        glGetShaderInfoLog(shader, infoLogLength, nullptr, infoLog.data());
+        cerr << "Shader compile error: " << infoLog.data() << endl;
+        return false;
+    }
+    std::cout << "Shader compile complite" << endl;
+    return true;
+}
+
+bool compileShader(GLuint shader, const char* source)
+{
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+    return checkShaderCompileStatus(shader);
+}
+
+string readShader(const string& filepath) {
+    ifstream file(filepath);
+    if (!file.is_open()) {
+        return "";
+    }
+
+    string shader_code;
+    string line;
+    while (getline(file, line)) {
+        shader_code += line + "\n";
+    }
+
+    return shader_code;
+}
+
+bool initialize()
+{
+    EGLint numConfigs;
+    EGLint majorVersion;
+    EGLint minorVersion;
+    EGLConfig eglConfig;
+    EGLint attribs[] = {
+    EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+    EGL_RED_SIZE, 8,
+    EGL_GREEN_SIZE, 8,
+    EGL_BLUE_SIZE, 8,
+    EGL_ALPHA_SIZE, 8,
+    EGL_DEPTH_SIZE, 24,
+    EGL_STENCIL_SIZE, 8,
+    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
+    EGL_NONE
+    };
+    eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    eglInitialize(eglDisplay, &majorVersion, &minorVersion);
+    eglChooseConfig(eglDisplay, attribs, &eglConfig, 1, &numConfigs);
+    eglSurface = eglCreateWindowSurface(eglDisplay, eglConfig, hWnd, NULL);
+    EGLint contextAttribs[] = {
+        EGL_CONTEXT_CLIENT_VERSION, 3,
+        EGL_NONE
+    };
+    eglContext = eglCreateContext(eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttribs);
+    eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext);
+
+
+    string shaderSource = readShader("source.vert");
+    const char* shaderCstr = shaderSource.c_str();
+
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    if (!compileShader(vertexShader, shaderCstr)) {
+        return false;
+    }
+
+    shaderSource = readShader("source.frag");
+    shaderCstr = shaderSource.c_str();
+
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    if (!compileShader(fragmentShader, shaderCstr)) {
+        return false;
+    }
+
+    program = glCreateProgram();
+    glAttachShader(program, vertexShader);
+    glAttachShader(program, fragmentShader);
+    glLinkProgram(program);
+    glUseProgram(program);
+
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+
+    return true;
+}
+
+void render()
+{
+    glm::vec3 cameraPosition = glm::vec3(cameraX, cameraY, 1.0f);
+    glm::vec3 cameraTarget = glm::vec3(cameraX, cameraY, 0.0f);
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+    glm::mat4 viewMatrix = glm::lookAt(cameraPosition, cameraTarget, cameraUp);
+
+    glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
+
+    glClear(GL_COLOR_BUFFER_BIT);
+    for (int i = 0, startIndex = 0; i < objectVertices.size(); ++i) {
+        glDrawArrays(GL_LINE_STRIP, startIndex, objectVertices[i]);
+        startIndex += objectVertices[i];
+    }
+}
+
+
+void cleanUp()
+{
+    glDeleteBuffers(1, &vbo);
+
+    GLuint vertexShader;
+    glGetAttachedShaders(program, 1, NULL, &vertexShader);
+    GLuint fragmentShader;
+    glGetAttachedShaders(program, 1, NULL, &fragmentShader);
+    glDetachShader(program, vertexShader);
+    glDetachShader(program, fragmentShader);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    glDeleteProgram(program);
+
+    eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    eglDestroyContext(eglDisplay, eglContext);
+    eglDestroySurface(eglDisplay, eglSurface);
+    eglTerminate(eglDisplay);
+}
 
 SHPHeader header;
 SHPRecordData record;
@@ -92,6 +244,8 @@ bool readShapefile(const char* fileName) {
     std::memcpy(&shpHeaderData.Zmax, offset, 8); offset += 8;
     std::memcpy(&shpHeaderData.Mmin, offset, 8); offset += 8;
     std::memcpy(&shpHeaderData.Mmax, offset, 8); offset += 8;
+
+    cout << (shpHeaderData.Xmax - shpHeaderData.Xmin) / (shpHeaderData.Ymax - shpHeaderData.Ymin) << endl;
 
     int32_t recordCount = 0;
     bool isPrintStatus = true;
